@@ -21,6 +21,7 @@ export default function Page() {
   const [audioSrc, setAudioSrc] = useState<string | null>(null);
   const [currentPlayingVoiceId, setCurrentPlayingVoiceId] = useState<string | null>(null);
   const [audioElements, setAudioElements] = useState<Record<string, HTMLAudioElement>>({});
+  const [showWarning, setShowWarning] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
@@ -53,6 +54,7 @@ export default function Page() {
     e.preventDefault();
 
     if (text.trim() && selectedVoice) {
+      setShowWarning(false);
       setIsLoading(true);
 
       try {
@@ -78,7 +80,7 @@ export default function Page() {
         setIsLoading(false);
       }
     } else {
-      console.error('No text or voice selected');
+      setShowWarning(true);
     }
   };
 
@@ -130,6 +132,11 @@ export default function Page() {
             {isLoading ? 'Loading...' : 'Generate Audio'}
           </button>
         </div>
+        {showWarning && (
+          <div style={{ color: 'red', marginBottom: '10px' }}>
+            Please select a voice before generating audio.
+          </div>
+        )}
       </form>
 
       {audioSrc && (
