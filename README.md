@@ -1,6 +1,6 @@
 # Text-to-Speech
 
-<p>Acesse o projeto <a href="https://text-to-speech-swart.vercel.app/">aqui</a></p>
+<p>Acesse o projeto <a href="https://text-to-speech-swart.vercel.app/" target="_blank">aqui</a></p>
 
 ## Tecnologias Usadas
 - ✔️ Next.js
