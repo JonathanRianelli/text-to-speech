@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
-import styles from './page.module.css';
+import { useState, useEffect, useRef } from "react";
+import styles from "./page.module.css";
 
 interface Voice {
   voice_id: string;
@@ -13,29 +13,30 @@ interface Voice {
 }
 
 export default function Page() {
-  const [text, setText] = useState('');
+  const [text, setText] = useState("");
   const [voices, setVoices] = useState<Voice[]>([]);
   const [selectedVoice, setSelectedVoice] = useState<Voice | null>(null);
   const [isListVisible, setIsListVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [audioSrc, setAudioSrc] = useState<string | null>(null);
-  const [currentPlayingVoiceId, setCurrentPlayingVoiceId] = useState<string | null>(null);
-  const [audioElements, setAudioElements] = useState<Record<string, HTMLAudioElement>>({});
-  const [showWarning, setShowWarning] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     const fetchVoices = async () => {
       try {
-        const response = await fetch('/api/voices');
+        const response = await fetch("/api/voices");
         if (response.ok) {
           const data = await response.json();
           setVoices(data.voices);
+          if (data.voices.length > 0) {
+            setSelectedVoice(data.voices[0]);
+          }
         } else {
-          console.error('Failed to fetch voices');
+          console.error("Failed to fetch voices");
         }
       } catch (error) {
-        console.error('Error fetching voices:', error);
+        console.error("Error fetching voices:", error);
       }
     };
 
@@ -53,56 +54,50 @@ export default function Page() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (text.trim() && selectedVoice) {
-      setShowWarning(false);
-      setIsLoading(true);
+    if (!selectedVoice) {
+      console.error("No voice selected");
+      setIsLoading(false);
+      return;
+    }
 
-      try {
-        const response = await fetch('/api/elevenlabs', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ text, voiceId: selectedVoice.voice_id }),
-        });
+    setIsLoading(true);
 
-        if (response.ok) {
-          const blob = await response.blob();
-          const url = URL.createObjectURL(blob);
-          setAudioSrc(url);
-          setIsLoading(false);
-        } else {
-          console.error('Failed to fetch audio');
-          setIsLoading(false);
-        }
-      } catch (error) {
-        console.error('Error fetching audio:', error);
+    try {
+      const response = await fetch("/api/elevenlabs", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text, voiceId: selectedVoice.voice_id }),
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        setAudioSrc(url);
+        setIsLoading(false);
+      } else {
+        console.error("Failed to fetch audio");
         setIsLoading(false);
       }
-    } else {
-      setShowWarning(true);
+    } catch (error) {
+      console.error("Error fetching audio:", error);
+      setIsLoading(false);
     }
   };
 
-  const handlePlayPreview = (voiceId: string, previewUrl: string) => {
-    const existingAudio = audioElements[voiceId];
-
-    if (existingAudio) {
-      if (existingAudio.paused) {
-        existingAudio.play();
-        setCurrentPlayingVoiceId(voiceId);
-      } else {
-        existingAudio.pause();
-        setCurrentPlayingVoiceId(null);
-      }
-    } else {
-      const newAudio = new Audio(previewUrl);
-      newAudio.onended = () => setCurrentPlayingVoiceId(null);
-      newAudio.play();
-      setAudioElements(prev => ({ ...prev, [voiceId]: newAudio }));
-      setCurrentPlayingVoiceId(voiceId);
+  const handlePlayPreview = (previewUrl: string) => {
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current.currentTime = 0; 
     }
+
+    const newAudio = new Audio(previewUrl);
+    newAudio.play();
+
+    currentAudioRef.current = newAudio;
   };
+
 
   const handleVoiceSelection = (voice: Voice) => {
     setSelectedVoice(voice);
@@ -129,41 +124,47 @@ export default function Page() {
             type="submit"
             disabled={isLoading}
           >
-            {isLoading ? 'Loading...' : 'Generate Audio'}
+            {isLoading ? "Loading..." : "Generate Audio"}
           </button>
         </div>
-        {showWarning && (
-          <div style={{ color: 'red', marginBottom: '10px' }}>
-            Please select a voice before generating audio.
-          </div>
-        )}
       </form>
 
       {audioSrc && (
-        <audio className={styles.audioPlayer} ref={audioRef} src={audioSrc} controls preload="auto" />
+        <audio
+          className={styles.audioPlayer}
+          ref={audioRef}
+          src={audioSrc}
+          controls
+          preload="auto"
+        />
       )}
 
-      <button
-        className={styles.selectButton}
-        onClick={toggleListVisibility}
-      >
-        {selectedVoice ? selectedVoice.name : 'Select a Voice'}
+      <button className={styles.selectButton} onClick={toggleListVisibility}>
+        {selectedVoice ? "Choose Voice" : "Loading"}
       </button>
 
-      <div className={`${styles.showContent} ${isListVisible ? styles.visible : ''}`}>
+      <div
+        className={`${styles.showContent} ${
+          isListVisible ? styles.visible : ""
+        }`}
+      >
         <ul className={styles.voiceList}>
           {voices.map((voice) => (
             <li
               key={voice.voice_id}
-              className={`${styles.voiceItem} ${selectedVoice?.voice_id === voice.voice_id ? styles.selectedVoice : ''}`}
+              className={`${styles.voiceItem} ${
+                selectedVoice?.voice_id === voice.voice_id
+                  ? styles.selectedVoice
+                  : ""
+              }`}
             >
               <span className={styles.voiceName}>{voice.name}</span>
               <div className={styles.buttons}>
                 <button
                   className={styles.button}
-                  onClick={() => handlePlayPreview(voice.voice_id, voice.preview_url)}
+                  onClick={() => handlePlayPreview(voice.preview_url)}
                 >
-                  {currentPlayingVoiceId === voice.voice_id ? 'Pause' : 'Play'}
+                  Preview
                 </button>
                 <button
                   className={styles.button}
@@ -177,19 +178,20 @@ export default function Page() {
         </ul>
       </div>
 
-      {selectedVoice && (
+      {selectedVoice && !isListVisible && (
         <div>
-          <h3 className={styles.voiceName}>{selectedVoice.name}</h3>
+          <h3 className={styles.voiceName}>Selected Voice: {selectedVoice.name}</h3>
           <p>Category: {selectedVoice.category}</p>
           <div>
             <p>Labels:</p>
             <ul>
               {Object.entries(selectedVoice.labels).map(([key, value]) => (
-                <li key={key}>{key}: {value}</li>
+                <li key={key}>
+                  {key}: {value}
+                </li>
               ))}
             </ul>
           </div>
-          <p>Description: {selectedVoice.description || 'No description available'}</p>
         </div>
       )}
     </div>
